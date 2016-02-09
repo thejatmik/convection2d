@@ -1,0 +1,79 @@
+clear all
+clc
+NX=10;
+NY=10;
+
+dx=0.2;
+dy=0.2;
+dt=0.0005;
+
+NGr=30000;
+NPr=0.733;
+
+omega=1.58;
+
+psie=zeros(NY,NX);
+zetae=zeros(NY,NX);
+zetae_half=zeros(NY,NX);
+Temp=zeros(NY,NX);
+Temp(:,NX)=100;
+Temp(:,1)=0;
+Temp_half=Temp;
+
+nstep=100;
+
+for it=1:nstep
+    it
+    for j=2:NY-1
+        for i=2:NX-1
+            valueu=(psie(j+1,i)-psie(j-1,i))/(2*dy);
+            valuev=-(psie(j,i+1)-psie(j,i-1))/(2*dx);
+            
+            %temp
+            dx_Temp_half=(Temp_half(j,i+1)+Temp_half(j,i-1)-2*Temp_half(j,i))/(dx*dx);
+            dy_Temp=(Temp(j+1,i)+Temp(j-1,i)-2*Temp(j,i))/(dy*dy);
+            
+            Temp_half(j,i)=(((1/NPr)*(dx_Temp_half+dy_Temp) - ...
+                valueu*(Temp_half(j,i+1)-Temp_half(j,i-1))/(2*dx) - ...
+                valuev*(Temp(j+1,i)-Temp(j-1,i))/(2*dy))*(dt/2))+Temp_half(j,i);
+            
+            Temp(j,i)=(((1/NPr)*(dx_Temp_half+dy_Temp) -...
+                valueu*(Temp_half(j,i+1)-Temp_half(j,i-1)) - ...
+                valuev*(Temp(j+1,i)-Temp(j-1,i))/(2*dy))*(dt/2))+Temp(j,i);
+
+            %vorticity/zeta
+            dx_zetae_half=(zetae_half(j,i+1)+zetae_half(j,i-1)-2*zetae_half(j,i))/(dx*dx);
+            dy_zetae=(zetae(j+1,i)+zetae(j-1,i)-2*zetae(j,i))/(dy*dy);
+            
+            zetae_half(j,i)=(((NGr/2)*(Temp(j+1,i)-Temp(j-1,i))/2*dy - ...
+                valueu*(zetae_half(j,i+1)-zetae_half(j,i-1))/(2*dx) - ...
+                valuev*(zetae(j+1,i)-zetae(j-1,i))/(2*dy) + ...
+                dx_zetae_half + dy_zetae)*(dt/2))+zetae(j,i);
+            
+            zetae(j,i)=(((NGr/2)*(Temp(j+1,i)-Temp(j-1,i))/(2*dy) - ...
+                valueu*(zetae_half(j,i+1)-zetae_half(j,i-1))/(2*dx) - ...
+                valuev*(zeta(j+1,i)-zeta(j-1,i))/(2*dy) + ...
+                dx_zetae_half + dy_zetae)*(dt/2))+zetae_half(j,i);
+            
+            %stream/psi
+            psie(j,i)=psie(j,i)+(omega/4)*(dx*dx*zetae(j,i)+ ...
+                psie(j,i-1)+psie(j,i+1)+psie(j+1,i)+psie(j-1,i) - ...
+                4*psie(j,i));
+        end
+    end
+    %vorticity at horizontal wall
+    for i=1:NX-1
+        zetae(1,i)=-(8*psie(2,i)-psie(3,i))/(2*dx*dx);
+        zetae(NY,i)=-(8*psie(NY-2,i)-psie(NY-3,i))/(2*dx*dx);
+    end
+    dy_Temp
+    if mod(it,1)==0
+        subplot (1,3,1)
+        imagesc(Temp); shading interp
+        subplot(1,3,2)
+        imagesc(psie); shading interp
+        subplot(1,3,3)
+        imagesc(zetae); shading interp
+        pause(0.5)
+    end
+end
